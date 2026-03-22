@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Uber System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+        h1 { color: #333; }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        button {
+            background: #000;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover { background: #333; }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 5px solid #000;
+        }
+        .error { border-left-color: red; color: red; }
+        .success { border-left-color: green; }
+    </style>
+</head>
+<body>
+
+    <h1>🚗 Uber System</h1>
+
+    <!-- Book Ride Form -->
+    <h2>Book a Ride</h2>
+
+    <label>Pickup Location</label>
+    <input type="number" id="x1" placeholder="X coordinate">
+    <input type="number" id="y1" placeholder="Y coordinate">
+
+    <label>Drop Location</label>
+    <input type="number" id="x2" placeholder="X coordinate">
+    <input type="number" id="y2" placeholder="Y coordinate">
+
+    <label>Ride Type</label>
+    <select id="rideType">
+        <option value="Standard">Standard</option>
+        <option value="Premium">Premium</option>
+        <option value="Auto">Auto</option>
+        <option value="Bike">Bike</option>
+    </select>
+
+    <button onclick="bookRide()">Book Ride</button>
+
+    <div id="result" style="display:none"></div>
+
+    <hr>
+
+    <!-- View All Rides -->
+    <h2>All Rides</h2>
+    <button onclick="viewRides()">View All Rides</button>
+    <div id="ridesResult" style="display:none"></div>
+
+    <script>
+        const API = "http://localhost:8080";
+
+        async function bookRide() {
+            const x1 = document.getElementById('x1').value;
+            const y1 = document.getElementById('y1').value;
+            const x2 = document.getElementById('x2').value;
+            const y2 = document.getElementById('y2').value;
+            const rideType = document.getElementById('rideType').value;
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = '';
+            resultDiv.innerHTML = 'Booking...';
+
+            try {
+                const response = await fetch(`${API}/book`, {
+                    method: 'POST',
+                    body: `x1=${x1}&y1=${y1}&x2=${x2}&y2=${y2}&rideType=${rideType}`
+                });
+
+                const text = await response.text();
+
+                if (text.startsWith("SUCCESS")) {
+                    const parts = text.split('|');
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `
+                        ✅ Ride Booked!<br>
+                        Driver: ${parts[1]}<br>
+                        Distance: ${parseFloat(parts[2]).toFixed(2)} units<br>
+                        Fare: Rs. ${parseFloat(parts[3]).toFixed(2)}
+                    `;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = '❌ ' + text;
+                }
+
+            } catch (err) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = '❌ Cannot connect to server!';
+            }
+        }
+
+        async function viewRides() {
+            const ridesDiv = document.getElementById('ridesResult');
+            ridesDiv.style.display = 'block';
+            ridesDiv.innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch(`${API}/rides`);
+                const text = await response.text();
+
+                if (text === "NO_RIDES") {
+                    ridesDiv.innerHTML = 'No rides yet.';
+                    return;
+                }
+
+                const rows = text.trim().split('\n');
+                let html = '<table border="1" width="100%" style="border-collapse:collapse">';
+                html += '<tr><th>ID</th><th>Type</th><th>Distance</th><th>Fare</th></tr>';
+                rows.forEach(row => {
+                    const cols = row.split('|');
+                    html += `<tr>
+                        <td>${cols[0]}</td>
+                        <td>${cols[1]}</td>
+                        <td>${parseFloat(cols[2]).toFixed(2)}</td>
+                        <td>Rs. ${parseFloat(cols[3]).toFixed(2)}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                ridesDiv.innerHTML = html;
+
+            } catch (err) {
+                ridesDiv.innerHTML = 'Cannot connect to server!';
+            }
+        }
+    </script>
+
+</body>
+</html>
