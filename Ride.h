@@ -37,9 +37,6 @@ public:
     void calculateFare();
     void displayRideDetails();
 
-    double getFare() const { return fare; }
-    double getDistance() const { return distance; }
-
     int getRideId() const { return rideId; }
     string getRideType() const { return rideType; }
     double getFare() const { return fare; }

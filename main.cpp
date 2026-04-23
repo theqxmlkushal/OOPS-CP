@@ -1,5 +1,12 @@
 #include <iostream>
 #include <vector>
+#include <limits>       
+#include "DriverManager.h"
+#include "Ride.h"
+
+using namespace std;
+#include <iostream>
+#include <vector>
 #include "DriverManager.h"
 #include "Ride.h"
 
@@ -10,9 +17,8 @@ int main() {
     DriverManager manager;
     manager.loadDriversFromFile("drivers.txt");
 
-    vector<Ride> rides;   // store all rides
+    vector<Ride> rides;
     int rideCounter = 1;
-
     int choice;
 
     while (true) {
@@ -23,6 +29,7 @@ int main() {
         cout << "3. Exit\n";
         cout << "Enter choice: ";
         cin >> choice;
+        cin.ignore();
 
         if (choice == 1) {
 
@@ -30,29 +37,32 @@ int main() {
 
             cout << "Enter pickup location (x y): ";
             cin >> x1 >> y1;
+            cin.ignore();
 
             cout << "Enter drop location (x y): ";
             cin >> x2 >> y2;
+            cin.ignore();
 
             if (x1 == x2 && y1 == y2) {
-            cout << "Error: Pickup and drop location cannot be the same!\n";
-            continue;  // goes back to menu
+                cout << "Error: Pickup and drop location cannot be the same!\n";
+                continue;
             }
 
             if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0) {
-            cout << "Error: Coordinates cannot be negative!\n";
-            continue;
+                cout << "Error: Coordinates cannot be negative!\n";
+                continue;
             }
 
             string rideType;
             cout << "Enter ride type (Standard/Premium/Auto/Bike): ";
             cin >> rideType;
+            cin.ignore();
 
             if (rideType != "Standard" && rideType != "Premium"
-            && rideType != "Auto" && rideType != "Bike") {
-            cout << "Error: Invalid ride type! Choose Standard/Premium/Auto/Bike\n";
-            continue;
-    }
+                && rideType != "Auto" && rideType != "Bike") {
+                cout << "Error: Invalid ride type! Choose Standard/Premium/Auto/Bike\n";
+                continue;
+            }
 
             try {
                 Driver* driver = manager.findNearestDriver(Location(x1, y1), rideType);
@@ -64,19 +74,149 @@ int main() {
                 cout << "\nDriver Assigned:\n";
                 driver->display();
 
-                // Create ride
                 Ride ride(rideCounter++, Location(x1, y1), Location(x2, y2), rideType);
 
                 ride.assignDriver(driver);
                 cout << "\nStatus: " << ride.getStatusString() << endl;
 
-                // Move to pickup
                 manager.simulateDriverMovement(driver, Location(x1, y1));
 
                 ride.startRide();
                 cout << "Status: " << ride.getStatusString() << endl;
 
-                // Move to destination
+                manager.simulateDriverMovement(driver, Location(x2, y2));
+
+                ride.completeRide();
+                cout << "Status: " << ride.getStatusString() << endl;
+
+                ride.calculateDistance();
+                ride.calculateFare();
+
+                cout << "\n===== RIDE SUMMARY =====\n";
+                cout << "Distance: " << ride.getDistance() << " units\n";
+                cout << "Fare: Rs. " << ride.getFare() << "\n";
+                cout << "========================\n";
+
+                rides.push_back(ride);
+                cout << "\nRide Completed Successfully!\n";
+            }
+            catch (exception& e) {
+                cout << "Error: " << e.what() << endl;
+            }
+        }
+
+        else if (choice == 2) {
+            if (rides.empty()) {
+                cout << "No rides yet.\n";
+            } else {
+                cout << "\n===== ALL RIDES =====\n";
+                for (Ride& r : rides) {
+                    r.displayRideDetails();
+                    cout << "----------------------\n";
+                }
+            }
+        }
+
+        else if (choice == 3) {
+            cout << "Exiting system...\n";
+            break;
+        }
+
+        else {
+            cout << "Invalid choice!\n";
+        }
+    }
+
+    return 0;
+}
+int main() {
+
+    DriverManager manager;
+    manager.loadDriversFromFile("drivers.txt");
+
+    vector<Ride> rides;
+    int rideCounter = 1;
+    int choice;
+
+    while (true) {
+
+        cout << "\n===== UBER SYSTEM MENU =====\n";
+        cout << "1. Book Ride\n";
+        cout << "2. View All Rides\n";
+        cout << "3. Exit\n";
+        cout << "Enter choice: ";
+
+        if (!(cin >> choice)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');  
+            cout << "Invalid input!\n";
+            continue;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');  // flushing leftover \n
+
+        if (choice == 1) {
+
+            int x1, y1, x2, y2;
+
+            cout << "Enter pickup location (x y): ";
+            if (!(cin >> x1 >> y1)) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Error: Invalid coordinates!\n";
+                continue;
+            }
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+            cout << "Enter drop location (x y): ";
+            if (!(cin >> x2 >> y2)) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Error: Invalid coordinates!\n";
+                continue;
+            }
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+            if (x1 == x2 && y1 == y2) {
+                cout << "Error: Pickup and drop location cannot be the same!\n";
+                continue;
+            }
+
+            if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0) {
+                cout << "Error: Coordinates cannot be negative!\n";
+                continue;
+            }
+
+            string rideType;
+            cout << "Enter ride type (Standard/Premium/Auto/Bike): ";
+            
+            getline(cin, rideType);
+
+            if (rideType != "Standard" && rideType != "Premium"
+                && rideType != "Auto" && rideType != "Bike") {
+                cout << "Error: Invalid ride type! Choose Standard/Premium/Auto/Bike\n";
+                continue;
+            }
+
+            try {
+                Driver* driver = manager.findNearestDriver(Location(x1, y1), rideType);
+
+                if (driver == nullptr) {
+                    throw runtime_error("No driver available!");
+                }
+
+                cout << "\nDriver Assigned:\n";
+                driver->display();
+
+                Ride ride(rideCounter++, Location(x1, y1), Location(x2, y2), rideType);
+
+                ride.assignDriver(driver);
+                cout << "\nStatus: " << ride.getStatusString() << endl;
+
+                manager.simulateDriverMovement(driver, Location(x1, y1));
+
+                ride.startRide();
+                cout << "Status: " << ride.getStatusString() << endl;
+
                 manager.simulateDriverMovement(driver, Location(x2, y2));
 
                 ride.completeRide();
@@ -89,7 +229,7 @@ int main() {
                 cout << "Fare: Rs. " << ride.getFare() << "\n";
                 cout << "========================\n";
 
-                rides.push_back(ride);   // store ride
+                rides.push_back(ride);
 
                 cout << "\nRide Completed Successfully!\n";
             }
@@ -99,7 +239,6 @@ int main() {
         }
 
         else if (choice == 2) {
-
             if (rides.empty()) {
                 cout << "No rides yet.\n";
             } else {
@@ -123,3 +262,4 @@ int main() {
 
     return 0;
 }
+
